@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# FunKiiU 0.9
+# FunKiiU 0.95
 
 import sys
 import os
@@ -85,8 +85,8 @@ parser.add_argument('-retry', type=int, default=4, dest='retry_count', choices=r
 parser.add_argument('-title', nargs='+', dest='specific_titles', help='Give TitleIDs to be specifically downloaded')
 parser.add_argument('-key', action='store', dest='key', help='Encrypted Title Key for the Title ID, if used, only the first Title ID is downloaded, multiple titles not supported yet')
 # parser.add_argument('-ticketsonly', action='store_true', default=False, dest='ticketsonly', help='Create only tickets, output them all in one folder')
-parser.add_argument('-onlinekeys', action='store_true', default=False, dest='onlinekeys', help='Gets latest titlekeys.json file from wiiu.titlekeys.com, saves (overwrites) it and uses as input')
-parser.add_argument('-onlinetickets', action='store_true', default=False, dest='onlinetickets', help='Gets ticket file from wiiu.titlekeys.com, should create a \'legit\' game')
+parser.add_argument('-onlinekeys', action='store_true', default=False, dest='onlinekeys', help='Gets latest titlekeys.json file from *theykeysite*, saves (overwrites) it and uses as input')
+parser.add_argument('-onlinetickets', action='store_true', default=False, dest='onlinetickets', help='Gets ticket file from *thekeysite*, should create a \'legit\' game')
 # parser.add_argument('-offline', action='store_true', default=False, dest='offline', help='Does not download the TMD and set the latest version in the ticket - because title version is not needed but nice to have')
 parser.add_argument('-nopatchdlc', action='store_false', default=True, dest='patch_dlc', help='This will disable unlocking all DLC content')
 parser.add_argument('-nopatchdemo', action='store_false', default=True, dest='patch_demo', help='This will disable patching the demo play limit')
@@ -98,6 +98,36 @@ tk = 0x140
 badinput = False
 error = False
 titlelist = []
+
+keysite =''
+config = {'keysite': ''}
+#fallback incase config exists but has junk data
+fallback = {'keysite': ''}
+
+try:
+    with open('config.json') as f:
+        config = json.load(f)
+except IOError:
+    # generate the file
+    with open('config.json', 'w') as f:
+        json.dump(fallback, f)
+
+if arguments.onlinekeys is not None or arguments.onlinetickets is not None:
+    if hashlib.md5(config['keysite']).hexdigest() == '436b7b232e995e6ebe66f58c44c0a66b':
+        keysite = config['keysite']
+    else:
+        print 'Please type *the* keysite to access online keys and tickets'
+        print 'Type something like: \'aaaa.bbbbbbbbb.ccc\', no http:// or quotes'
+        checkurl = raw_input().lower
+        if hashlib.md5(checkurl).hexdigest() == '436b7b232e995e6ebe66f58c44c0a66b':
+            print 'Correct url! Saving to config file...'
+            config['keysite'] = checkurl
+            keysite = config['keysite']
+            with open('config.json', 'w') as f:
+                json.dump(fallback, f)
+        else:
+            print 'Incorrect, exiting. (Will add multiple attempts later, sorry!)'
+            sys.exit(0)
 
 
 #if online keys or tickets are not being used, check that a title id and key have been provided
@@ -184,16 +214,16 @@ def processTitleID(titleid, key):
         tmd = tmd.read()
         titleversion = tmd[tk+0x9C:tk+0x9E]
 
-        #get ticket from wiiu.titlekeys.com, or generate ticket
+        #get ticket from keysite, or generate ticket
         if arguments.onlinetickets:
-            tikurl = 'https://wiiu.titlekeys.com/ticket/' + titleid + '.tik'
+            tikurl = 'https://' + keysite + '/ticket/' + titleid + '.tik'
             for attempt in range(arguments.retry_count+1):
                 try:
                     if(attempt > 0):
                         print '*Attempt ' + str(attempt+1) + ' of ' + str(arguments.retry_count+1)
                     onlinetik = urllib2.urlopen(tikurl)
                 except urllib2.URLError, e:
-                    print 'Could not download ticket from wiiu.titlekeys.com...'
+                    print 'Could not download ticket from ' + keysite
                     error = True
                     continue
                 error = False
@@ -258,8 +288,8 @@ print '*******\nFunKiiU by cearp\n*******\n'
 
 
 if arguments.onlinekeys or arguments.onlinetickets:
-    print 'Downloading/updating data from wiiu.titlekeys.com...'
-    url = 'https://wiiu.titlekeys.com/json'
+    print 'Downloading/updating data from ' + keysite
+    url = 'https://' + keysite + '/json'
     for attempt in range(arguments.retry_count+1):
         try:
             if(attempt > 0):
@@ -308,14 +338,14 @@ if arguments.onlinekeys or arguments.onlinetickets:
                 #if we want the ticket, but it doesn't exist, skip
                 if arguments.onlinetickets:
                     if not ticketexists:
-                        print 'ERROR: Cannot find ticket on wiiu.titleleys.com\n'
+                        print 'ERROR: Cannot find ticket on ' + keysite '\n'
                         continue
                 #if we want key, check if it exists + ok, else skip
                 if arguments.onlinekeys:
                     if key and (len(key) is 32) and all(c in string.hexdigits for c in key):
                         pass
                     else:
-                        print 'ERROR: No key/bad key on wiiu.titleleys.com\n'
+                        print 'ERROR: No key/bad key on ' + keysite '\n'
                         continue
                 processTitleID(titleid, key)
 
