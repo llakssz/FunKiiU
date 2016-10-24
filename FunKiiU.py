@@ -112,31 +112,33 @@ except IOError:
     with open('config.json', 'w') as f:
         json.dump(fallback, f)
 
-if arguments.onlinekeys is not None or arguments.onlinetickets is not None:
-    if hashlib.md5(config['keysite']).hexdigest() == '436b7b232e995e6ebe66f58c44c0a66b':
+if arguments.onlinekeys or arguments.onlinetickets:
+    if hashlib.md5(str(config['keysite'])).hexdigest() == 'd098abb93c29005dbd07deb43d81c5df':
         keysite = config['keysite']
     else:
         print 'Please type *the* keysite to access online keys and tickets'
         print 'Type something like: \'aaaa.bbbbbbbbb.ccc\', no http:// or quotes'
-        checkurl = raw_input().lower
-        if hashlib.md5(checkurl).hexdigest() == '436b7b232e995e6ebe66f58c44c0a66b':
-            print 'Correct url! Saving to config file...'
+        checkurl = raw_input()
+        checkurl = checkurl.lower()
+        if hashlib.md5(str(checkurl)).hexdigest() == 'd098abb93c29005dbd07deb43d81c5df':
+            print 'Correct url! Saving to config file...\n'
             config['keysite'] = checkurl
             keysite = config['keysite']
             with open('config.json', 'w') as f:
-                json.dump(fallback, f)
+                json.dump(config, f)
         else:
             print 'Incorrect, exiting. (Will add multiple attempts later, sorry!)'
             sys.exit(0)
 
 
 #if online keys or tickets are not being used, check that a title id and key have been provided
-if (arguments.onlinekeys is None) and (arguments.onlinetickets is None):
-    if (arguments.titleid is None) or (arguments.key is None):
+if not arguments.onlinekeys and not arguments.onlinetickets:
+    if not arguments.specific_titles or not arguments.key:
         print 'You need to enter a Title ID and Encrypted Title Key'
+        print 'Or use -onlinekeys or -onlinetickets'
         sys.exit(0)
 
-if arguments.specific_titles is not None:
+if arguments.specific_titles:
     for specific_title in arguments.specific_titles:
         if (len(specific_title) is 16) and all(c in string.hexdigits for c in specific_title):
             titlelist.append(specific_title.lower())
@@ -146,7 +148,7 @@ if arguments.specific_titles is not None:
             print ''
             badinput = True
 
-if arguments.key is not None:
+if arguments.key:
     if (len(arguments.key) is 32) and all(c in string.hexdigits for c in arguments.key):
         pass
     else:
@@ -338,14 +340,14 @@ if arguments.onlinekeys or arguments.onlinetickets:
                 #if we want the ticket, but it doesn't exist, skip
                 if arguments.onlinetickets:
                     if not ticketexists:
-                        print 'ERROR: Cannot find ticket on ' + keysite '\n'
+                        print 'ERROR: Cannot find ticket on ' + keysite + '\n'
                         continue
                 #if we want key, check if it exists + ok, else skip
                 if arguments.onlinekeys:
                     if key and (len(key) is 32) and all(c in string.hexdigits for c in key):
                         pass
                     else:
-                        print 'ERROR: No key/bad key on ' + keysite '\n'
+                        print 'ERROR: No key/bad key on ' + keysite + '\n'
                         continue
                 processTitleID(titleid, key)
 
