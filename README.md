@@ -29,3 +29,10 @@ which gives everything with one of those 'brazil' tickets, downloaded from *they
 this ticket is basically a legit ticket so once installed:
 
 **the game will work without hacks**
+
+
+If desired you can also install to a custom directory using the -outputdir tag. This makes it more convinient to determine what title the files go to. Using the above example you would do this:
+
+`python FunKiiU.py -outputdir pikmin_3 -title 000500001012be00 -onlinetickets`
+
+**this will install the files to /install/pikmin_3**
