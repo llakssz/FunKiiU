@@ -183,9 +183,9 @@ def makeTicket(titleid, key, titleversion, fulloutputpath):
 def processTitleID(titleid, key):
 
     if(arguments.output_dir is not None):
-        rawdir = os.path.join(arguments.output_dir, 'output', titleid)
+        rawdir = os.path.join('install', arguments.output_dir)
     else:
-        rawdir = os.path.join('output', titleid)
+        rawdir = os.path.join('install', titleid)
 
     if not os.path.exists(rawdir):
         os.makedirs(os.path.join(rawdir))
