@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 # FunKiiU 0.95
 
@@ -180,12 +181,12 @@ def makeTicket(titleid, key, titleversion, fulloutputpath):
     open(fulloutputpath,'wb').write(tikdata)
 
 
-def processTitleID(titleid, key):
+def processTitleID(titleid, key, name):
 
     if(arguments.output_dir is not None):
-        rawdir = os.path.join(arguments.output_dir, 'output', titleid)
+        rawdir = os.path.join(arguments.output_dir, 'install', titleid + '-' + name)
     else:
-        rawdir = os.path.join('output', titleid)
+        rawdir = os.path.join('install', titleid + '-' + name)
 
     if not os.path.exists(rawdir):
         os.makedirs(os.path.join(rawdir))
@@ -317,6 +318,12 @@ if arguments.onlinekeys or arguments.onlinetickets:
         for item in data:
             titleid = item["titleID"]
             key = item["titleKey"]
+            name = item["name"]
+            if name:
+                name = name.replace('\n',' ')
+                name = re.sub(r'[\\/*?:"<>|]',"",name)
+                # name = re.sub(u"(\u2122|\u2018|\u2019|\xa9|\xae)", "", name)
+                print name.encode('utf-8')
             
             ticketexists = item["ticket"]
 
@@ -360,8 +367,8 @@ if arguments.onlinekeys or arguments.onlinetickets:
                         pass
                     else:
                         continue
-                processTitleID(titleid, key)
+                processTitleID(titleid, key, name)
 
 
 else:
-    processTitleID(titlelist[0], arguments.key)
+    processTitleID(titlelist[0], arguments.key, '')
