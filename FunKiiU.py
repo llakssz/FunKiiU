@@ -219,12 +219,10 @@ def make_ticket(titleid, key, titleversion, fulloutputpath, patch_demo=False, pa
     # not sure what the value at 0xB3 is... mine is 0 but some i see 5.
     # or 0xE0, the reserved data is...?
     typecheck = titleid[4:8]
-    if typecheck == '0002':
-        if patch_demo:
-            patch_ticket_demo(tikdata)
-    elif typecheck == '000c':
-        if patch_dlc:
-            patch_ticket_demo(tikdata)
+    if typecheck == '0002' and patch_demo:
+        patch_ticket_demo(tikdata)
+    elif typecheck == '000c' and patch_dlc:
+        patch_ticket_dlc(tikdata)
     open(fulloutputpath, 'wb').write(tikdata)
 
 
