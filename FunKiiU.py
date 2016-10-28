@@ -323,7 +323,7 @@ if arguments.onlinekeys or arguments.onlinetickets:
                 name = name.replace('\n',' ')
                 name = re.sub(r'[\\/*?:"<>|]',"",name)
                 # name = re.sub(u"(\u2122|\u2018|\u2019|\xa9|\xae)", "", name)
-                print name.encode('utf-8')
+                # print name.encode('utf-8')
             
             ticketexists = item["ticket"]
 
@@ -356,7 +356,7 @@ if arguments.onlinekeys or arguments.onlinetickets:
                     else:
                         print 'ERROR: No key/bad key on ' + keysite + '\n'
                         continue
-                processTitleID(titleid, key)
+                processTitleID(titleid, key, name)
 
             if arguments.all:
                 if arguments.onlinetickets:
