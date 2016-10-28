@@ -242,15 +242,22 @@ def process_title_id(titleid, key, name=None, output_dir=None, retry_count=3, on
         tmd = f.read()
 
     titleversion = tmd[TK + 0x9C:TK + 0x9E]
+    typecheck = titleid[4:8]
 
-    # get ticket from keysite, or generate ticket
+    # get ticket from keysite, from cdn if game update, or generate ticket
     if onlinetickets:
-        keysite = get_keysite()
-        tikurl = 'https://{}/ticket/{}.tik'.format(keysite, titleid)
-        if not download_file(tikurl, os.path.join(rawdir, 'title.tik'), retry_count):
-            print('ERROR: Could not download ticket from {}'.format(keysite))
-            print('Skipping title...')
-            return
+        if typecheck == '000e':
+            if not download_file(baseurl + '/cetk', os.path.join(rawdir, 'title.tik'), retry_count):
+                print('ERROR: Could not download CETK...')
+                print('Skipping title...')
+                return
+        else:
+            keysite = get_keysite()
+            tikurl = 'https://{}/ticket/{}.tik'.format(keysite, titleid)
+            if not download_file(tikurl, os.path.join(rawdir, 'title.tik'), retry_count):
+                print('ERROR: Could not download ticket from {}'.format(keysite))
+                print('Skipping title...')
+                return
     else:
         make_ticket(titleid, key, titleversion, os.path.join(rawdir, 'title.tik'), patch_demo, patch_dlc)
 
