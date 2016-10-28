@@ -227,7 +227,12 @@ def make_ticket(titleid, key, titleversion, fulloutputpath, patch_demo=False, pa
 
 
 def safe_filename(filename):
-    """Strip any non-path-safe characters from a filename"""
+    """Strip any non-path-safe characters from a filename
+    >>> print(safe_filename("Pokémon"))
+    Pokémon
+    >>> print(safe_filename("幻影異聞録♯ＦＥ"))
+    幻影異聞録_ＦＥ
+    """
     keep = ' ._'
     return re.sub(r'_+', '_', ''.join(c if (c.isalnum() or c in keep) else '_' for c in filename)).strip('_ ')
 
@@ -298,7 +303,7 @@ def process_title_id(titleid, key, name=None, output_dir=None, retry_count=3, on
 
 def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download_all=False, output_dir=None,
          retry_count=3, patch_demo=True, patch_dlc=True):
-    print('*******\nFunKiiU by cearp\n*******\n')
+    print('*******\nFunKiiU by cearp and the cerea1killer\n*******\n')
     titlekeys_data = []
 
     if download_all or onlinekeys or onlinetickets:
