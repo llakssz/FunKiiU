@@ -8,9 +8,9 @@ FunKiiU is a Python tool, compatible with Python 2.7 and 3, to download Wii U co
 
 
 FunKiiU will accept keys and generate tickets, but you do not have to enter a key.
-- You can choose to get the key automatically from **\*thekeysite\***.
-- Or, you can choose to get a legit ticket from **\*thekeysite\*** instead.
-- **¡¡On first use, you will need to provide the url of **\*thekeysite\***!!**
+- You can choose to get the key automatically from \***thekeysite**\*.
+- Or, you can choose to get a legit ticket from *\***thekeysite**\* instead.
+- **¡¡On first use, you will need to provide the url of \***thekeysite**\*!!**
     - **Here is a hint** - https://encrypted.google.com/search?hl=en&q=wiiu%20title%20key%20site   
 
 Using **keys** will generate a ticket that is not legit, the Wii U needs signature patches to accept it. (This is possible now, but a bit tricky to set up.)
@@ -26,15 +26,15 @@ To download Pikmin 3 EUR, by entering the Title ID and key:
 $ python FunKiiU.py -title 000500001012be00 -key 32characterstitlekeyforpikmineur
 ```
 
-To download Pikmin 3 EUR, by entering the Title ID and getting the key from **\*thekeysite\***:
+To download Pikmin 3 EUR, by entering the Title ID and getting the key from \***thekeysite**\*:
 ```sh
 $ python FunKiiU.py -title 000500001012be00 -onlinekeys
 ```
-To download Pikmin 3 EUR, by entering the Title ID and getting the ticket from **\*thekeysite\***:
+To download Pikmin 3 EUR, by entering the Title ID and getting the ticket from \***thekeysite**\*:
 ````sh
 $ python FunKiiU.py -title 000500001012be00 -onlinetickets
 ````
-Download multiple things (one after another), can use *-onlinekeys* or *-onlinetickets* too:
+Download multiple things, one after another - (can use with *-onlinekeys* or *-onlinetickets*):
 ````sh
 $ python FunKiiU.py -title TITLEID1 TITLEID2 TITLEID3 -key KEY1 KEY2 KEY3
 ````
