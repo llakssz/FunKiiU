@@ -47,3 +47,4 @@ Content will be output to a folder with the Title ID, name (if using *-onlinekey
 ![output](http://i.imgur.com/U1n66Zj.png)
 
 The downloaded output can then be installed using **wupinstaller**, or any similar tool.
+I recommend this wupinstaller mod - https://github.com/Yardape8000/wupinstaller/releases/latest
