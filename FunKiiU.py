@@ -92,7 +92,7 @@ def progress_bar(part, total, length=10, char='#', blank=' ', left='[', right=']
     bar_len = int((float(part) / float(total) * length) % length)
     bar = char * bar_len
     blanks = blank * (length - bar_len)
-    return '{}{}{}{} {} of {}, {:.0%}'.format(
+    return '{}{}{}{} {} of {}, {}%'.format(
         left, bar, blanks, right, bytes2human(part), bytes2human(total), percent
     ) + ' ' * 20
 
@@ -184,14 +184,14 @@ def patch_ticket_demo(tikdata):
     tikdata[TK + 0x124:TK + 0x164] = bytes([0x00] * 64)
 
 
-def make_ticket(titleid, key, titleversion, fulloutputpath, patch_demo=False, patch_dlc=False):
+def make_ticket(title_id, title_key, title_version, fulloutputpath, patch_demo=False, patch_dlc=False):
     tikdata = bytearray(TIKTEM)
-    tikdata[TK + 0xA6:TK + 0xA8] = titleversion
-    tikdata[TK + 0x9C:TK + 0xA4] = binascii.a2b_hex(titleid)
-    tikdata[TK + 0x7F:TK + 0x8F] = binascii.a2b_hex(key)
+    tikdata[TK + 0xA6:TK + 0xA8] = title_version
+    tikdata[TK + 0x9C:TK + 0xA4] = binascii.a2b_hex(title_id)
+    tikdata[TK + 0x7F:TK + 0x8F] = binascii.a2b_hex(title_key)
     # not sure what the value at 0xB3 is... mine is 0 but some i see 5.
     # or 0xE0, the reserved data is...?
-    typecheck = titleid[4:8]
+    typecheck = title_id[4:8]
     if typecheck == '0002' and patch_demo:
         patch_ticket_demo(tikdata)
     elif typecheck == '000c' and patch_dlc:
@@ -210,12 +210,18 @@ def safe_filename(filename):
     return re.sub(r'_+', '_', ''.join(c if (c.isalnum() or c in keep) else '_' for c in filename)).strip('_ ')
 
 
-def process_title_id(titleid, key, name=None, output_dir=None, retry_count=3, onlinetickets=False, patch_demo=False,
+def process_title_id(title_id, title_key, name=None, output_dir=None, retry_count=3, onlinetickets=False, patch_demo=False,
                      patch_dlc=False):
     if name:
-        dirname = '{} - {}'.format(titleid, name)
+        dirname = '{} - {}'.format(title_id, name)
     else:
-        dirname = titleid
+        dirname = title_id
+
+    typecheck = title_id[4:8]
+    if typecheck == '000c':
+        dirname = dirname + ' - DLC'
+    elif typecheck == '000e':
+        dirname = dirname + ' - Update'
 
     rawdir = os.path.join('install', safe_filename(dirname))
 
@@ -228,7 +234,7 @@ def process_title_id(titleid, key, name=None, output_dir=None, retry_count=3, on
     # download stuff
     print('Downloading TMD...')
 
-    baseurl = 'http://ccs.cdn.c.shop.nintendowifi.net/ccs/download/{}'.format(titleid)
+    baseurl = 'http://ccs.cdn.c.shop.nintendowifi.net/ccs/download/{}'.format(title_id)
     tmd_path = os.path.join(rawdir, 'title.tmd')
     if not download_file(baseurl + '/tmd', tmd_path, retry_count):
         print('ERROR: Could not download TMD...')
@@ -241,8 +247,7 @@ def process_title_id(titleid, key, name=None, output_dir=None, retry_count=3, on
     with open(tmd_path, 'rb') as f:
         tmd = f.read()
 
-    titleversion = tmd[TK + 0x9C:TK + 0x9E]
-    typecheck = titleid[4:8]
+    title_version = tmd[TK + 0x9C:TK + 0x9E]
 
     # get ticket from keysite, from cdn if game update, or generate ticket
     if onlinetickets:
@@ -253,19 +258,27 @@ def process_title_id(titleid, key, name=None, output_dir=None, retry_count=3, on
                 return
         else:
             keysite = get_keysite()
-            tikurl = 'https://{}/ticket/{}.tik'.format(keysite, titleid)
+            tikurl = 'https://{}/ticket/{}.tik'.format(keysite, title_id)
             if not download_file(tikurl, os.path.join(rawdir, 'title.tik'), retry_count):
                 print('ERROR: Could not download ticket from {}'.format(keysite))
                 print('Skipping title...')
                 return
     else:
-        make_ticket(titleid, key, titleversion, os.path.join(rawdir, 'title.tik'), patch_demo, patch_dlc)
+        make_ticket(title_id, title_key, title_version, os.path.join(rawdir, 'title.tik'), patch_demo, patch_dlc)
 
     print('Downloading Contents...')
     content_count = int(binascii.hexlify(tmd[TK + 0x9E:TK + 0xA0]), 16)
+    
+    total_size = 0
+    for i in range(content_count):
+        c_offs = 0xB04 + (0x30 * i)
+        total_size += int(binascii.hexlify(tmd[c_offs + 0x08:c_offs + 0x10]), 16)
+    print('Total size is {}'.format(bytes2human(total_size)))
+
     for i in range(content_count):
         c_offs = 0xB04 + (0x30 * i)
         c_id = binascii.hexlify(tmd[c_offs:c_offs + 0x04]).decode()
+        c_type = binascii.hexlify(tmd[c_offs + 0x06:c_offs + 0x8])
         expected_size = int(binascii.hexlify(tmd[c_offs + 0x08:c_offs + 0x10]), 16)
         print('Downloading {} of {}.'.format(i + 1, content_count))
         outfname = os.path.join(rawdir, c_id + '.app')
@@ -274,9 +287,10 @@ def process_title_id(titleid, key, name=None, output_dir=None, retry_count=3, on
         if not download_file('{}/{}'.format(baseurl, c_id), outfname, retry_count, expected_size=expected_size):
             print('ERROR: Could not download content file... Skipping title')
             return
-        if not download_file('{}/{}.h3'.format(baseurl, c_id), outfnameh3, retry_count, ignore_404=True):
-            print('ERROR: Could not download content file... Skipping title')
-            return
+        if c_type == "2003":
+            if not download_file('{}/{}.h3'.format(baseurl, c_id), outfnameh3, retry_count):
+                print('ERROR: Could not download h3 file... Skipping title')
+                return
 
     print('\nTitle download complete\n')
 
@@ -285,6 +299,16 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
          retry_count=3, patch_demo=True, patch_dlc=True):
     print('*******\nFunKiiU by cearp and the cerea1killer\n*******\n')
     titlekeys_data = []
+
+    if download_all and (titles or keys):
+        print('If using \'-all\', don\'t give Title IDs or keys')
+        sys.exit(0)
+    if keys and (len(keys)!=len(titles)):
+        print('Number of keys and Title IDs do not match up')
+        sys.exit(0)
+    if titles and (not keys and not onlinekeys and not onlinetickets):
+        print('You also need to provide \'-keys\' or use \'-onlinekeys\' or \'-onlinetickets\'')
+        sys.exit(0)
 
     if download_all or onlinekeys or onlinetickets:
         keysite = get_keysite()
@@ -308,30 +332,38 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
         title_key = None
         name = None
 
-        if keys:
-            title_key = keys.pop()
-        elif onlinekeys or onlinetickets:
-            title_data = next((t for t in titlekeys_data if t['titleID'] == title_id.lower()), None)
+        #game updates have a ticket on cdn, so we don't need it from json
+        if onlinetickets and (title_id[4:8] == '000e'):
+            process_title_id(title_id, title_key, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
+        else:
+            if keys:
+                title_key = keys.pop()
+                if not check_title_key(title_key):
+                    print('The key(s) must be 32 hexadecimal characters long')
+                    print('{} - is not ok.'.format(title_id))
+                    sys.exit(0)
+            elif onlinekeys or onlinetickets:
+                title_data = next((t for t in titlekeys_data if t['titleID'] == title_id.lower()), None)
 
-            if not title_data:
-                print("ERROR: Could not find key for ID {}, skipping".format(title_id))
-                continue
-
-            elif onlinetickets:
-                if not title_data['ticket']:
-                    print('ERROR: Ticket not available online for {}'.format(title_id))
+                if not title_data:
+                    print("ERROR: Could not find data for {}, skipping".format(title_id))
                     continue
 
-            elif onlinekeys:
-                title_key = title_data['titleKey']
+                elif onlinetickets:
+                    if not title_data['ticket']:
+                        print('ERROR: Ticket not available online for {}'.format(title_id))
+                        continue
 
-            name = title_data.get('name', None)
+                elif onlinekeys:
+                    title_key = title_data['titleKey']
 
-        if not (title_key or onlinetickets):
-            print('ERROR: Could not find title or ticket for {}'.format(title_id))
-            continue
+                name = title_data.get('name', None)
 
-        process_title_id(title_id, title_key, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
+            if not (title_key or onlinetickets):
+                print('ERROR: Could not find title or ticket for {}'.format(title_id))
+                continue
+
+            process_title_id(title_id, title_key, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
 
     if download_all:
         for title_data in titlekeys_data:
@@ -340,8 +372,8 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
             name = title_data.get('name', None)
             typecheck = title_id[4:8]
 
-            # skip updates
-            if typecheck in ('000e', '8005', '800f') or int(typecheck, 16) & 0x10:
+            # skip system stuff (try to only get games+updates+dlcs)
+            if typecheck in ('8005', '800f') or int(typecheck, 16) & 0x10:
                 continue
             elif title_id in titles:
                 continue
