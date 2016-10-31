@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-#  FunKiiU 0.95.1
+#  FunKiiU 2.0.2
 
 from __future__ import unicode_literals, print_function
 
@@ -287,10 +287,9 @@ def process_title_id(title_id, title_key, name=None, output_dir=None, retry_coun
         if not download_file('{}/{}'.format(baseurl, c_id), outfname, retry_count, expected_size=expected_size):
             print('ERROR: Could not download content file... Skipping title')
             return
-        if c_type == "2003":
-            if not download_file('{}/{}.h3'.format(baseurl, c_id), outfnameh3, retry_count):
-                print('ERROR: Could not download h3 file... Skipping title')
-                return
+        if not download_file('{}/{}.h3'.format(baseurl, c_id), outfnameh3, retry_count, ignore_404=True):
+            print('ERROR: Could not download h3 file... Skipping title')
+            return
 
     print('\nTitle download complete\n')
 
