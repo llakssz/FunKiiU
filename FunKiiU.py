@@ -210,10 +210,10 @@ def safe_filename(filename):
     return re.sub(r'_+', '_', ''.join(c if (c.isalnum() or c in keep) else '_' for c in filename)).strip('_ ')
 
 
-def process_title_id(title_id, title_key, name=None, output_dir=None, retry_count=3, onlinetickets=False, patch_demo=False,
+def process_title_id(title_id, title_key, name=None, region=None, output_dir=None, retry_count=3, onlinetickets=False, patch_demo=False,
                      patch_dlc=False):
     if name:
-        dirname = '{} - {}'.format(title_id, name)
+        dirname = '{} - {} - {}'.format(title_id, region, name)
     else:
         dirname = title_id
 
@@ -330,10 +330,11 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
             sys.exit(0)
         title_key = None
         name = None
+        region = None
 
         #game updates have a ticket on cdn, so we don't need it from json
         if onlinetickets and (title_id[4:8] == '000e'):
-            process_title_id(title_id, title_key, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
+            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
         else:
             if keys:
                 title_key = keys.pop()
@@ -357,18 +358,20 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
                     title_key = title_data['titleKey']
 
                 name = title_data.get('name', None)
+                region = title_data.get('region', None)
 
             if not (title_key or onlinetickets):
                 print('ERROR: Could not find title or ticket for {}'.format(title_id))
                 continue
 
-            process_title_id(title_id, title_key, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
+            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
 
     if download_all:
         for title_data in titlekeys_data:
             title_id = title_data['titleID']
             title_key = title_data.get('titleKey', None)
             name = title_data.get('name', None)
+            region = title_data.get('region', None)
             typecheck = title_id[4:8]
 
             # skip system stuff (try to only get games+updates+dlcs)
@@ -376,7 +379,7 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
                 continue
             elif title_id in titles:
                 continue
-            process_title_id(title_id, title_key, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
+            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
 
 
 if __name__ == '__main__':
