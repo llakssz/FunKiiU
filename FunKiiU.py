@@ -56,6 +56,9 @@ parser.add_argument('-nopatchdemo', action='store_false', default=True,
                     dest='patch_demo', help='This will disable patching the demo play limit')
 parser.add_argument('-all', action='store_true', default=False, dest='download_all',
                     help='Downloads/gets tickets for EVERYTHING from the keyfile')
+parser.add_argument('-eur', action='store_true', default=False, dest='download_eur',
+                    help='Downloads/gets tickets for EURO from the keyfile')
+
 
 
 def bytes2human(n, f='%(value).2f %(symbol)s', symbols='customary'):
@@ -210,10 +213,10 @@ def safe_filename(filename):
     return re.sub(r'_+', '_', ''.join(c if (c.isalnum() or c in keep) else '_' for c in filename)).strip('_ ')
 
 
-def process_title_id(title_id, title_key, name=None, output_dir=None, retry_count=3, onlinetickets=False, patch_demo=False,
+def process_title_id(title_id, title_key, region=None, name=None, output_dir=None, retry_count=3, onlinetickets=False, patch_demo=False,
                      patch_dlc=False):
     if name:
-        dirname = '{} - {}'.format(title_id, name)
+        dirname = '{} - {} - {}'.format(region, title_id, name)
     else:
         dirname = title_id
 
@@ -294,13 +297,16 @@ def process_title_id(title_id, title_key, name=None, output_dir=None, retry_coun
     print('\nTitle download complete\n')
 
 
-def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download_all=False, output_dir=None,
+def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download_all=False, download_eur=False, output_dir=None,
          retry_count=3, patch_demo=True, patch_dlc=True):
     print('*******\nFunKiiU by cearp and the cerea1killer\n*******\n')
     titlekeys_data = []
 
     if download_all and (titles or keys):
         print('If using \'-all\', don\'t give Title IDs or keys')
+        sys.exit(0)
+    if download_eur and (titles or keys):
+        print('If using \'-eur\', don\'t give Title IDs or keys')
         sys.exit(0)
     if keys and (len(keys)!=len(titles)):
         print('Number of keys and Title IDs do not match up')
@@ -329,11 +335,12 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
             print('{} - is not ok.'.format(title_id))
             sys.exit(0)
         title_key = None
+        region = None
         name = None
 
         #game updates have a ticket on cdn, so we don't need it from json
         if onlinetickets and (title_id[4:8] == '000e'):
-            process_title_id(title_id, title_key, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
+            process_title_id(title_id, title_key, region, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
         else:
             if keys:
                 title_key = keys.pop()
@@ -357,17 +364,19 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
                     title_key = title_data['titleKey']
 
                 name = title_data.get('name', None)
+                region = title_data.get('region', None)
 
             if not (title_key or onlinetickets):
                 print('ERROR: Could not find title or ticket for {}'.format(title_id))
                 continue
 
-            process_title_id(title_id, title_key, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
+            process_title_id(title_id, title_key, region, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
 
     if download_all:
         for title_data in titlekeys_data:
             title_id = title_data['titleID']
             title_key = title_data.get('titleKey', None)
+            region = title_data.get('region', None)
             name = title_data.get('name', None)
             typecheck = title_id[4:8]
 
@@ -376,7 +385,22 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
                 continue
             elif title_id in titles:
                 continue
-            process_title_id(title_id, title_key, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
+            process_title_id(title_id, title_key, region, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
+
+    if download_eur:
+        for title_data in titlekeys_data:
+            title_id = title_data['titleID']
+            title_key = title_data.get('titleKey', None)
+            region = title_data.get('region', None)
+            name = title_data.get('name', None)
+            typecheck = title_id[4:8]
+
+            # skip system stuff (try to only get games+updates+dlcs)
+            if typecheck in ('8005', '800f') or int(typecheck, 16) & 0x10 or region in ('USA','JPN'):
+                continue
+            elif title_id in titles:
+                continue
+            process_title_id(title_id, title_key, region, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
 
 
 if __name__ == '__main__':
@@ -386,6 +410,7 @@ if __name__ == '__main__':
          onlinekeys=arguments.onlinekeys,
          onlinetickets=arguments.onlinetickets,
          download_all=arguments.download_all,
+         download_eur=arguments.download_eur,
          output_dir=arguments.output_dir,
          retry_count=arguments.retry_count,
          patch_demo=arguments.patch_demo,
