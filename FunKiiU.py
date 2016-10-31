@@ -104,17 +104,30 @@ def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=
     for _ in retry(retry_count):
         try:
             infile = urlopen(url)
+            # start of modified code
+            if os.path.isfile(outfname):
+                statinfo = os.stat(outfname)
+                diskFilesize = statinfo.st_size
+            else:
+                diskFilesize = 0
+            print('\n-Downloading {}.\n-File size is {}.\n-File in disk is {}.'.format(outfname, expected_size,diskFilesize))
 
-            with open(outfname, 'wb') as outfile:
-                downloaded_size = 0
-                while True:
-                    buf = infile.read(chunk_size)
-                    if not buf:
-                        break
-                    downloaded_size += len(buf)
-                    if expected_size and len(buf) == chunk_size:
-                        print(' Downloaded {}'.format(progress_bar(downloaded_size, expected_size)), end='\r')
-                    outfile.write(buf)
+            #if not (expected_size is None):
+            if expected_size != diskFilesize:
+                with open(outfname, 'wb') as outfile:
+                    downloaded_size = 0
+                    while True:
+                         buf = infile.read(chunk_size)
+                         if not buf:
+                             break
+                         downloaded_size += len(buf)
+                         if expected_size and len(buf) == chunk_size:
+                             print(' Downloaded {}'.format(progress_bar(downloaded_size, expected_size)), end='\r')
+                         outfile.write(buf)
+            else:
+                print('-File skipped.\n')
+                downloaded_size = statinfo.st_size
+            # end of modified code
 
             if expected_size is not None:
                 if int(os.path.getsize(outfname)) != expected_size:
