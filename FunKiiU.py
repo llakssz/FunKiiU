@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-#  FunKiiU 2.0.2
+#  FunKiiU 0.95.1
 
 from __future__ import unicode_literals, print_function
 
@@ -101,17 +101,30 @@ def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=
     for _ in retry(retry_count):
         try:
             infile = urlopen(url)
+            # start of modified code
+            if os.path.isfile(outfname):
+                statinfo = os.stat(outfname)
+                diskFilesize = statinfo.st_size
+            else:
+                diskFilesize = 0
+            print('\n-Downloading {}.\n-File size is {}.\n-File in disk is {}.'.format(outfname, expected_size,diskFilesize))
 
-            with open(outfname, 'wb') as outfile:
-                downloaded_size = 0
-                while True:
-                    buf = infile.read(chunk_size)
-                    if not buf:
-                        break
-                    downloaded_size += len(buf)
-                    if expected_size and len(buf) == chunk_size:
-                        print(' Downloaded {}'.format(progress_bar(downloaded_size, expected_size)), end='\r')
-                    outfile.write(buf)
+            #if not (expected_size is None):
+            if expected_size != diskFilesize:
+                with open(outfname, 'wb') as outfile:
+                    downloaded_size = 0
+                    while True:
+                         buf = infile.read(chunk_size)
+                         if not buf:
+                             break
+                         downloaded_size += len(buf)
+                         if expected_size and len(buf) == chunk_size:
+                             print(' Downloaded {}'.format(progress_bar(downloaded_size, expected_size)), end='\r')
+                         outfile.write(buf)
+            else:
+                print('-File skipped.\n')
+                downloaded_size = statinfo.st_size
+            # end of modified code
 
             if expected_size is not None:
                 if int(os.path.getsize(outfname)) != expected_size:
@@ -287,9 +300,10 @@ def process_title_id(title_id, title_key, name=None, output_dir=None, retry_coun
         if not download_file('{}/{}'.format(baseurl, c_id), outfname, retry_count, expected_size=expected_size):
             print('ERROR: Could not download content file... Skipping title')
             return
-        if not download_file('{}/{}.h3'.format(baseurl, c_id), outfnameh3, retry_count, ignore_404=True):
-            print('ERROR: Could not download h3 file... Skipping title')
-            return
+        if c_type == "2003":
+            if not download_file('{}/{}.h3'.format(baseurl, c_id), outfnameh3, retry_count):
+                print('ERROR: Could not download h3 file... Skipping title')
+                return
 
     print('\nTitle download complete\n')
 
