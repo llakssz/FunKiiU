@@ -216,7 +216,7 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
         dirname = '{} - {} - {}'.format(title_id, region, name)
     else:
         dirname = title_id
-
+    print('Starting work in: "{}"'.format(dirname))
     typecheck = title_id[4:8]
     if typecheck == '000c':
         dirname = dirname + ' - DLC'
@@ -291,7 +291,7 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
             print('ERROR: Could not download h3 file... Skipping title')
             return
 
-    print('\nTitle download complete\n')
+    print('\nTitle download complete in "{}"\n'.format(dirname))
 
 
 def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download_all=False, output_dir=None,
