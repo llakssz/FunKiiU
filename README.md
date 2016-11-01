@@ -42,6 +42,10 @@ Downloads all content from **-thekeysite-**, all games, updates and dlc:
 ````sh
 $ python FunKiiU.py -all
 ````
+Simulates to do stuff, without actually downloading something:
+````sh
+$ python FunKiiU.py <options from above> -simulate
+````
 ---
 Content will be output to a folder with the Title ID, name (if using *-onlinekeys* or *-onlinetickets*), and type (DLC or update), within the **'install'** directory.
 ![output](http://i.imgur.com/U1n66Zj.png)
