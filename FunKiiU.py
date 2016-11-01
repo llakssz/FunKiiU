@@ -14,6 +14,12 @@ import re
 import sys
 import zlib
 
+from multiprocessing import Pool, TimeoutError
+
+import time
+
+import signal
+
 try:
     from urllib.request import urlopen
     from urllib.error import URLError, HTTPError
@@ -388,6 +394,7 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
             process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate)
 
     if download_regions:
+        jobData = []
         for title_data in titlekeys_data:
             title_id = title_data['titleID']
             title_key = title_data.get('titleKey', None)
@@ -403,11 +410,33 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
                 continue
             elif title_id in titles:
                 continue
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate)
+
+            jobData.append([title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate])
+
+        # http://stackoverflow.com/a/11312948/21027
+        pool = Pool(processes=4, initializer=init_worker)
+        try:
+            pool.map(process_title_id_job, jobData)
+        except KeyboardInterrupt:
+            # Allow ^C to interrupt from any thread.
+            sys.stdout.write('\033[0m')
+            sys.stdout.write('User Interupt\n')
+            pool.terminate()
+        else:
+            pool.close()
+        pool.join()
 
 
 def log(output):
     print(output.encode(sys.stdout.encoding, errors='replace'))
+
+
+def process_title_id_job(args):
+    return process_title_id(*args)
+
+
+def init_worker():
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
 if __name__ == '__main__':
