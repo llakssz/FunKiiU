@@ -226,17 +226,10 @@ def safe_filename(filename):
     return re.sub(r'_+', '_', ''.join(c if (c.isalnum() or c in keep) else '_' for c in filename)).strip('_ ')
 
 
-<<<<<<< HEAD
 def process_title_id(title_id, title_key, region=None, name=None, output_dir=None, retry_count=3, onlinetickets=False, patch_demo=False,
                      patch_dlc=False):
     if name:
         dirname = '{} - {} - {}'.format(region, title_id, name)
-=======
-def process_title_id(title_id, title_key, name=None, region=None, output_dir=None, retry_count=3, onlinetickets=False, patch_demo=False,
-                     patch_dlc=False):
-    if name:
-        dirname = '{} - {} - {}'.format(title_id, region, name)
->>>>>>> refs/remotes/llakssz/master
     else:
         dirname = title_id
 
@@ -357,15 +350,10 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
         title_key = None
         region = None
         name = None
-        region = None
 
         #game updates have a ticket on cdn, so we don't need it from json
         if onlinetickets and (title_id[4:8] == '000e'):
-<<<<<<< HEAD
             process_title_id(title_id, title_key, region, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
-=======
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
->>>>>>> refs/remotes/llakssz/master
         else:
             if keys:
                 title_key = keys.pop()
@@ -395,11 +383,7 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
                 print('ERROR: Could not find title or ticket for {}'.format(title_id))
                 continue
 
-<<<<<<< HEAD
             process_title_id(title_id, title_key, region, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
-=======
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
->>>>>>> refs/remotes/llakssz/master
 
     if download_all:
         for title_data in titlekeys_data:
@@ -407,7 +391,6 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
             title_key = title_data.get('titleKey', None)
             region = title_data.get('region', None)
             name = title_data.get('name', None)
-            region = title_data.get('region', None)
             typecheck = title_id[4:8]
 
             # skip system stuff (try to only get games+updates+dlcs)
@@ -415,7 +398,6 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
                 continue
             elif title_id in titles:
                 continue
-<<<<<<< HEAD
             process_title_id(title_id, title_key, region, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
 
     if download_eur:
@@ -432,9 +414,6 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
             elif title_id in titles:
                 continue
             process_title_id(title_id, title_key, region, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
-=======
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
->>>>>>> refs/remotes/llakssz/master
 
 
 if __name__ == '__main__':
