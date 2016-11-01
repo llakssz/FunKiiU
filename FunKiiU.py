@@ -56,6 +56,8 @@ parser.add_argument('-nopatchdemo', action='store_false', default=True,
                     dest='patch_demo', help='This will disable patching the demo play limit')
 parser.add_argument('-all', action='store_true', default=False, dest='download_all',
                     help='Downloads/gets tickets for EVERYTHING from the keyfile')
+parser.add_argument('-simulate', action='store_true', default=False, dest='simulate',
+                    help="Don't download anything, just do like you would.")
 
 
 def bytes2human(n, f='%(value).2f %(symbol)s', symbols='customary'):
@@ -211,12 +213,12 @@ def safe_filename(filename):
 
 
 def process_title_id(title_id, title_key, name=None, region=None, output_dir=None, retry_count=3, onlinetickets=False, patch_demo=False,
-                     patch_dlc=False):
+                     patch_dlc=False, simulate=False):
     if name:
         dirname = '{} - {} - {}'.format(title_id, region, name)
     else:
         dirname = title_id
-    print('Starting work in: "{}"'.format(dirname))
+
     typecheck = title_id[4:8]
     if typecheck == '000c':
         dirname = dirname + ' - DLC'
@@ -224,6 +226,12 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
         dirname = dirname + ' - Update'
 
     rawdir = os.path.join('install', safe_filename(dirname))
+
+    if simulate:
+        log('Simulate: Would start work in in: "{}"'.format(rawdir))
+        return
+
+    log('Starting work in: "{}"'.format(rawdir))
 
     if output_dir is not None:
         rawdir = os.path.join(output_dir, rawdir)
@@ -291,11 +299,11 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
             print('ERROR: Could not download h3 file... Skipping title')
             return
 
-    print('\nTitle download complete in "{}"\n'.format(dirname))
+    log('\nTitle download complete in "{}"\n'.format(dirname))
 
 
 def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download_all=False, output_dir=None,
-         retry_count=3, patch_demo=True, patch_dlc=True):
+         retry_count=3, patch_demo=True, patch_dlc=True, simulate=False):
     print('*******\nFunKiiU by cearp and the cerea1killer\n*******\n')
     titlekeys_data = []
 
@@ -364,7 +372,7 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
                 print('ERROR: Could not find title or ticket for {}'.format(title_id))
                 continue
 
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
+            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate)
 
     if download_all:
         for title_data in titlekeys_data:
@@ -379,7 +387,11 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
                 continue
             elif title_id in titles:
                 continue
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
+            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate)
+
+
+def log(output):
+    print(output.encode(sys.stdout.encoding, errors='replace'))
 
 
 if __name__ == '__main__':
@@ -392,4 +404,5 @@ if __name__ == '__main__':
          output_dir=arguments.output_dir,
          retry_count=arguments.retry_count,
          patch_demo=arguments.patch_demo,
-         patch_dlc=arguments.patch_dlc)
+         patch_dlc=arguments.patch_dlc,
+         simulate=arguments.simulate)
