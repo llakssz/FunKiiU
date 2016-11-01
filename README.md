@@ -38,9 +38,13 @@ Download multiple things, one after another - (can use with *-onlinekeys* or *-o
 ````sh
 $ python FunKiiU.py -title TITLEID1 TITLEID2 TITLEID3 -key KEY1 KEY2 KEY3
 ````
-Downloads all content from **-thekeysite-**, all games, updates and dlc:
+Downloads all content of a specific region (e.g. EUR) from **-thekeysite-**, games, updates and dlc:
 ````sh
-$ python FunKiiU.py -all
+$ python FunKiiU.py -download_region EUR
+````
+Downloads all content of a specific region (e.g. USA,JPN) from **-thekeysite-**, games, updates and dlc:
+````sh
+$ python FunKiiU.py -download_region USA,JPN
 ````
 Simulates to do stuff, without actually downloading something:
 ````sh
