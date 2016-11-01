@@ -56,6 +56,13 @@ parser.add_argument('-nopatchdemo', action='store_false', default=True,
                     dest='patch_demo', help='This will disable patching the demo play limit')
 parser.add_argument('-all', action='store_true', default=False, dest='download_all',
                     help='Downloads/gets tickets for EVERYTHING from the keyfile')
+parser.add_argument('-eur', action='store_true', default=False, dest='download_eur',
+                    help='Downloads/gets tickets for EURO from the keyfile')
+parser.add_argument('-usa', action='store_true', default=False, dest='download_usa',
+                    help='Downloads/gets tickets for USA from the keyfile')
+parser.add_argument('-jpn', action='store_true', default=False, dest='download_jpn',
+                    help='Downloads/gets tickets for USA from the keyfile')
+
 
 
 def bytes2human(n, f='%(value).2f %(symbol)s', symbols='customary'):
@@ -101,17 +108,30 @@ def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=
     for _ in retry(retry_count):
         try:
             infile = urlopen(url)
+            # start of modified code
+            if os.path.isfile(outfname):
+                statinfo = os.stat(outfname)
+                diskFilesize = statinfo.st_size
+            else:
+                diskFilesize = 0
+            print('\n-Downloading {}.\n-File size is {}.\n-File in disk is {}.'.format(outfname, expected_size,diskFilesize))
 
-            with open(outfname, 'wb') as outfile:
-                downloaded_size = 0
-                while True:
-                    buf = infile.read(chunk_size)
-                    if not buf:
-                        break
-                    downloaded_size += len(buf)
-                    if expected_size and len(buf) == chunk_size:
-                        print(' Downloaded {}'.format(progress_bar(downloaded_size, expected_size)), end='\r')
-                    outfile.write(buf)
+            #if not (expected_size is None):
+            if expected_size != diskFilesize:
+                with open(outfname, 'wb') as outfile:
+                    downloaded_size = 0
+                    while True:
+                         buf = infile.read(chunk_size)
+                         if not buf:
+                             break
+                         downloaded_size += len(buf)
+                         if expected_size and len(buf) == chunk_size:
+                             print(' Downloaded {}'.format(progress_bar(downloaded_size, expected_size)), end='\r')
+                         outfile.write(buf)
+            else:
+                print('-File skipped.\n')
+                downloaded_size = statinfo.st_size
+            # end of modified code
 
             if expected_size is not None:
                 if int(os.path.getsize(outfname)) != expected_size:
@@ -210,10 +230,9 @@ def safe_filename(filename):
     return re.sub(r'_+', '_', ''.join(c if (c.isalnum() or c in keep) else '_' for c in filename)).strip('_ ')
 
 
-def process_title_id(title_id, title_key, name=None, region=None, output_dir=None, retry_count=3, onlinetickets=False, patch_demo=False,
-                     patch_dlc=False):
+def process_title_id(title_id, title_key, region=None, name=None, output_dir=None, retry_count=3, onlinetickets=False, patch_demo=False, patch_dlc=False):
     if name:
-        dirname = '{} - {} - {}'.format(title_id, region, name)
+        dirname = '{} - {} - {}'.format(region, title_id, name)
     else:
         dirname = title_id
 
@@ -294,13 +313,22 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
     print('\nTitle download complete\n')
 
 
-def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download_all=False, output_dir=None,
+def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download_all=False, download_eur=False, download_usa=False, download_jpn=False, output_dir=None,
          retry_count=3, patch_demo=True, patch_dlc=True):
     print('*******\nFunKiiU by cearp and the cerea1killer\n*******\n')
     titlekeys_data = []
 
     if download_all and (titles or keys):
         print('If using \'-all\', don\'t give Title IDs or keys')
+        sys.exit(0)
+    if download_eur and (titles or keys):
+        print('If using \'-eur\', don\'t give Title IDs or keys')
+        sys.exit(0)
+    if download_usa and (titles or keys):
+        print('If using \'-eur\', don\'t give Title IDs or keys')
+        sys.exit(0)
+    if download_jpn and (titles or keys):
+        print('If using \'-eur\', don\'t give Title IDs or keys')
         sys.exit(0)
     if keys and (len(keys)!=len(titles)):
         print('Number of keys and Title IDs do not match up')
@@ -309,7 +337,7 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
         print('You also need to provide \'-keys\' or use \'-onlinekeys\' or \'-onlinetickets\'')
         sys.exit(0)
 
-    if download_all or onlinekeys or onlinetickets:
+    if download_all or download_eur or download_usa or download_jpn or onlinekeys or onlinetickets:
         keysite = get_keysite()
 
         print(u'Downloading/updating data from {0}'.format(keysite))
@@ -329,12 +357,12 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
             print('{} - is not ok.'.format(title_id))
             sys.exit(0)
         title_key = None
-        name = None
         region = None
+        name = None
 
         #game updates have a ticket on cdn, so we don't need it from json
         if onlinetickets and (title_id[4:8] == '000e'):
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
+            process_title_id(title_id, title_key, region, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
         else:
             if keys:
                 title_key = keys.pop()
@@ -364,14 +392,14 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
                 print('ERROR: Could not find title or ticket for {}'.format(title_id))
                 continue
 
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
+            process_title_id(title_id, title_key, region, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
 
     if download_all:
         for title_data in titlekeys_data:
             title_id = title_data['titleID']
             title_key = title_data.get('titleKey', None)
-            name = title_data.get('name', None)
             region = title_data.get('region', None)
+            name = title_data.get('name', None)
             typecheck = title_id[4:8]
 
             # skip system stuff (try to only get games+updates+dlcs)
@@ -379,7 +407,52 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
                 continue
             elif title_id in titles:
                 continue
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
+            process_title_id(title_id, title_key, region, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
+
+    if download_eur:
+        for title_data in titlekeys_data:
+            title_id = title_data['titleID']
+            title_key = title_data.get('titleKey', None)
+            region = title_data.get('region', None)
+            name = title_data.get('name', None)
+            typecheck = title_id[4:8]
+
+            # skip system stuff (try to only get games+updates+dlcs)
+            if typecheck in ('8005', '800f') or int(typecheck, 16) & 0x10 or region in ('USA','JPN'):
+                continue
+            elif title_id in titles:
+                continue
+            process_title_id(title_id, title_key, region, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
+
+    if download_usa:
+        for title_data in titlekeys_data:
+            title_id = title_data['titleID']
+            title_key = title_data.get('titleKey', None)
+            region = title_data.get('region', None)
+            name = title_data.get('name', None)
+            typecheck = title_id[4:8]
+
+            # skip system stuff (try to only get games+updates+dlcs)
+            if typecheck in ('8005', '800f') or int(typecheck, 16) & 0x10 or region in ('EUR','JPN'):
+                continue
+            elif title_id in titles:
+                continue
+            process_title_id(title_id, title_key, region, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
+
+    if download_jpn:
+        for title_data in titlekeys_data:
+            title_id = title_data['titleID']
+            title_key = title_data.get('titleKey', None)
+            region = title_data.get('region', None)
+            name = title_data.get('name', None)
+            typecheck = title_id[4:8]
+
+            # skip system stuff (try to only get games+updates+dlcs)
+            if typecheck in ('8005', '800f') or int(typecheck, 16) & 0x10 or region in ('EUR','USA'):
+                continue
+            elif title_id in titles:
+                continue
+            process_title_id(title_id, title_key, region, name, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
 
 
 if __name__ == '__main__':
@@ -389,6 +462,9 @@ if __name__ == '__main__':
          onlinekeys=arguments.onlinekeys,
          onlinetickets=arguments.onlinetickets,
          download_all=arguments.download_all,
+         download_eur=arguments.download_eur,
+         download_usa=arguments.download_usa,
+         download_jpn=arguments.download_jpn,
          output_dir=arguments.output_dir,
          retry_count=arguments.retry_count,
          patch_demo=arguments.patch_demo,
