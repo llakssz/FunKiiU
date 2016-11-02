@@ -345,6 +345,7 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
             titlekeys_data = json.load(data_file)
 
     for title_id in titles:
+        title_id = title_id.lower()
         if not check_title_id(title_id):
             print('The Title ID(s) must be 16 hexadecimal characters long')
             print('{} - is not ok.'.format(title_id))
