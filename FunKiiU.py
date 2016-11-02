@@ -229,7 +229,7 @@ def safe_filename(filename):
     >>> print(safe_filename("幻影異聞録♯ＦＥ"))
     幻影異聞録_ＦＥ
     """
-    keep = ' ._'
+    keep = '_-'
     return re.sub(r'_+', '_', ''.join(c if (c.isalnum() or c in keep) else '_' for c in filename)).strip('_ ')
 
 
