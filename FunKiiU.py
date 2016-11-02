@@ -60,10 +60,12 @@ parser.add_argument('-nopatchdlc', action='store_false', default=True,
                     dest='patch_dlc', help='This will disable unlocking all DLC content')
 parser.add_argument('-nopatchdemo', action='store_false', default=True,
                     dest='patch_demo', help='This will disable patching the demo play limit')
-parser.add_argument('-download_regions', nargs="?", default=['USA', 'EUR', 'JPN'], dest='download_regions',
+parser.add_argument('-region', nargs="?", default=[], dest='download_regions',
                     help='Downloads/gets tickets for regions: [EUR|USA|JPN] from the keyfile')
 parser.add_argument('-simulate', action='store_true', default=False, dest='simulate',
                     help="Don't download anything, just do like you would.")
+parser.add_argument('-ticketsonly', action='store_true', default=False, dest='tickets_only',
+                    help="Only download/generate tickets (and TMD and CERT), don't download any content")
 
 
 def bytes2human(n, f='%(value).2f %(symbol)s', symbols='customary'):
@@ -232,7 +234,7 @@ def safe_filename(filename):
 
 
 def process_title_id(title_id, title_key, name=None, region=None, output_dir=None, retry_count=3, onlinetickets=False, patch_demo=False,
-                     patch_dlc=False, simulate=False):
+                     patch_dlc=False, simulate=False, tickets_only=False):
     if name:
         dirname = '{} - {} - {}'.format(title_id, region, name)
     else:
@@ -293,6 +295,11 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
     else:
         make_ticket(title_id, title_key, title_version, os.path.join(rawdir, 'title.tik'), patch_demo, patch_dlc)
 
+    if tickets_only:
+        print('Ticket, TMD, and CERT completed. Not downloading contents.')
+        return
+
+
     print('Downloading Contents...')
     content_count = int(binascii.hexlify(tmd[TK + 0x9E:TK + 0xA0]), 16)
     
@@ -321,13 +328,16 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
     log('\nTitle download complete in "{}"\n'.format(dirname))
 
 
-def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download_regions=[], output_dir=None,
-         retry_count=3, patch_demo=True, patch_dlc=True, simulate=False):
+def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download_regions=False, output_dir=None,
+         retry_count=3, patch_demo=True, patch_dlc=True, simulate=False, tickets_only=False):
     print('*******\nFunKiiU by cearp and the cerea1killer\n*******\n')
     titlekeys_data = []
 
+    if download_regions is None:
+        print('You need to enter a region code after \'-region\', like \'-region USA\' or \'-region JPN EUR\'')
+        sys.exit(0)     
     if download_regions and (titles or keys):
-        print('If using \'-all\', don\'t give Title IDs or keys')
+        print('If using \'-region\', don\'t give Title IDs or keys, it gets all titles from the keysite')
         sys.exit(0)
     if keys and (len(keys)!=len(titles)):
         print('Number of keys and Title IDs do not match up')
@@ -335,6 +345,7 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
     if titles and (not keys and not onlinekeys and not onlinetickets):
         print('You also need to provide \'-keys\' or use \'-onlinekeys\' or \'-onlinetickets\'')
         sys.exit(0)
+
 
     if download_regions or onlinekeys or onlinetickets:
         keysite = get_keysite()
@@ -351,6 +362,7 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
             titlekeys_data = json.load(data_file)
 
     for title_id in titles:
+        title_id = title_id.lower()
         if not check_title_id(title_id):
             print('The Title ID(s) must be 16 hexadecimal characters long')
             print('{} - is not ok.'.format(title_id))
@@ -361,7 +373,7 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
 
         #game updates have a ticket on cdn, so we don't need it from json
         if onlinetickets and (title_id[4:8] == '000e'):
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc)
+            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only)
         else:
             if keys:
                 title_key = keys.pop()
@@ -373,12 +385,11 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
                 title_data = next((t for t in titlekeys_data if t['titleID'] == title_id.lower()), None)
 
                 if not title_data:
-                    print("ERROR: Could not find data for {}, skipping".format(title_id))
+                    print("ERROR: Could not find data on {} for {}, skipping".format(keysite, title_id))
                     continue
-
                 elif onlinetickets:
-                    if not title_data['ticket']:
-                        print('ERROR: Ticket not available online for {}'.format(title_id))
+                    if title_data['ticket'] == '0':
+                        print('ERROR: Ticket not available on {} for {}'.format(keysite,title_id))
                         continue
 
                 elif onlinekeys:
@@ -391,7 +402,7 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
                 print('ERROR: Could not find title or ticket for {}'.format(title_id))
                 continue
 
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate)
+            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only)
 
     if download_regions:
         jobData = []
@@ -401,17 +412,17 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
             name = title_data.get('name', None)
             region = title_data.get('region', None)
             typecheck = title_id[4:8]
-
-            # skip system stuff (try to only get games+updates+dlcs)
-            if region and region not in download_regions:
-                log('Skipping {} - {}'.format(name, region))
+ 
+            if not region or (region not in download_regions):
                 continue
-            if typecheck in ('8005', '800f') or int(typecheck, 16) & 0x10:
+            #only get games+dlcs+updates
+            if typecheck not in ('0000', '000c', '000e'):
                 continue
-            elif title_id in titles:
+            if onlinetickets and (not title_data['ticket']):
                 continue
-
-            jobData.append([title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate])
+            elif onlinekeys and (not title_data['titleKey']):
+                continue
+            jobData.append([title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only])
 
         # http://stackoverflow.com/a/11312948/21027
         pool = Pool(processes=4, initializer=init_worker)
@@ -425,7 +436,6 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
         else:
             pool.close()
         pool.join()
-
 
 def log(output):
     print(output.encode(sys.stdout.encoding, errors='replace'))
@@ -450,4 +460,5 @@ if __name__ == '__main__':
          retry_count=arguments.retry_count,
          patch_demo=arguments.patch_demo,
          patch_dlc=arguments.patch_dlc,
-         simulate=arguments.simulate)
+         simulate=arguments.simulate,
+         tickets_only=arguments.tickets_only)
