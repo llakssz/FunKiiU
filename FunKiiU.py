@@ -379,12 +379,11 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
                 title_data = next((t for t in titlekeys_data if t['titleID'] == title_id.lower()), None)
 
                 if not title_data:
-                    print("ERROR: Could not find data for {}, skipping".format(title_id))
+                    print("ERROR: Could not find data on {} for {}, skipping".format(keysite, title_id))
                     continue
-
                 elif onlinetickets:
-                    if not title_data['ticket']:
-                        print('ERROR: Ticket not available online for {}'.format(title_id))
+                    if title_data['ticket'] == '0':
+                        print('ERROR: Ticket not available on {} for {}'.format(keysite,title_id))
                         continue
 
                 elif onlinekeys:
