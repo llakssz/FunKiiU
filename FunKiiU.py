@@ -54,7 +54,7 @@ parser.add_argument('-nopatchdlc', action='store_false', default=True,
                     dest='patch_dlc', help='This will disable unlocking all DLC content')
 parser.add_argument('-nopatchdemo', action='store_false', default=True,
                     dest='patch_demo', help='This will disable patching the demo play limit')
-parser.add_argument('-download_regions', nargs="?", default=['USA', 'EUR', 'JPN'], dest='download_regions',
+parser.add_argument('-region', nargs="?", default=['USA', 'EUR', 'JPN'], dest='download_regions',
                     help='Downloads/gets tickets for regions: [EUR|USA|JPN] from the keyfile')
 parser.add_argument('-simulate', action='store_true', default=False, dest='simulate',
                     help="Don't download anything, just do like you would.")
