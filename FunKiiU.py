@@ -328,7 +328,7 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
     log('\nTitle download complete in "{}"\n'.format(dirname))
 
 
-def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download_regions=False, output_dir=None,
+def main(titles=None, keys=None, onlinekeys=False, onlinetickets=True, download_regions=False, output_dir=None,
          retry_count=3, patch_demo=True, patch_dlc=True, simulate=False, tickets_only=False):
     print('*******\nFunKiiU by cearp and the cerea1killer\n*******\n')
     titlekeys_data = []
