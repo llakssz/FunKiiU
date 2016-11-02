@@ -236,15 +236,15 @@ def safe_filename(filename):
 def process_title_id(title_id, title_key, name=None, region=None, output_dir=None, retry_count=3, onlinetickets=False, patch_demo=False,
                      patch_dlc=False, simulate=False, tickets_only=False):
     if name:
-        dirname = '{} - {} - {}'.format(title_id, region, name)
+        dirname = '{}-{}-{}'.format(name, region, title_id)
     else:
         dirname = title_id
 
     typecheck = title_id[4:8]
     if typecheck == '000c':
-        dirname = dirname + ' - DLC'
+        dirname = dirname + '-DLC'
     elif typecheck == '000e':
-        dirname = dirname + ' - Update'
+        dirname = dirname + '-Update'
 
     rawdir = os.path.join('install', safe_filename(dirname))
 
