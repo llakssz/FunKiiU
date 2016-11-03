@@ -1,8 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-#  FunKiiU 2.0.2
+#  FunKiiU 2.2
 
 from __future__ import unicode_literals, print_function
+
+__VERSION__ = 2.2
 
 import argparse
 import base64
@@ -324,7 +326,7 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
 
 def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download_regions=False, output_dir=None,
          retry_count=3, patch_demo=True, patch_dlc=True, simulate=False, tickets_only=False):
-    print('*******\nFunKiiU by cearp and the cerea1killer\n*******\n')
+    print('*******\nFunKiiU {} by cearp and the cerea1killer\n*******\n'.format(__VERSION__))
     titlekeys_data = []
 
     if download_regions is None:
