@@ -263,6 +263,7 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
     tmd_path = os.path.join(rawdir, 'title.tmd')
     if not download_file(baseurl + '/tmd', tmd_path, retry_count):
         print('ERROR: Could not download TMD...')
+        print('MAYBE YOU ARE BLOCKING CONNECTIONS TO NINTENDO? IF YOU ARE, DON\'T...! :)')
         print('Skipping title...')
         return
 
