@@ -111,7 +111,7 @@ def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=
                 diskFilesize = statinfo.st_size
             else:
                 diskFilesize = 0
-            print('\n-Downloading {}.\n-File size is {}.\n-File in disk is {}.'.format(outfname, expected_size,diskFilesize))
+            print('-Downloading {}.\n-File size is {}.\n-File in disk is {}.'.format(outfname, expected_size,diskFilesize))
 
             #if not (expected_size is None):
             if expected_size != diskFilesize:
@@ -126,7 +126,7 @@ def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=
                              print(' Downloaded {}'.format(progress_bar(downloaded_size, expected_size)), end='\r')
                          outfile.write(buf)
             else:
-                print('-File skipped.\n')
+                print('-File skipped.')
                 downloaded_size = statinfo.st_size
             # end of modified code
 
@@ -135,7 +135,7 @@ def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=
                     print('Content download not correct size\n')
                     continue
                 else:
-                    print(' Download complete: {}'.format(bytes2human(downloaded_size)) + ' ' * 40)
+                    print('Download complete: {}\n'.format(bytes2human(downloaded_size)) + ' ' * 40)
         except HTTPError as e:
             if e.code == 404 and ignore_404:
                 # We are ignoring this because its a 404 error, not a failure
@@ -273,19 +273,19 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
     title_version = tmd[TK + 0x9C:TK + 0x9E]
 
     # get ticket from keysite, from cdn if game update, or generate ticket
-    if onlinetickets:
-        if typecheck == '000e':
-            if not download_file(baseurl + '/cetk', os.path.join(rawdir, 'title.tik'), retry_count):
-                print('ERROR: Could not download CETK...')
-                print('Skipping title...')
-                return
-        else:
-            keysite = get_keysite()
-            tikurl = 'https://{}/ticket/{}.tik'.format(keysite, title_id)
-            if not download_file(tikurl, os.path.join(rawdir, 'title.tik'), retry_count):
-                print('ERROR: Could not download ticket from {}'.format(keysite))
-                print('Skipping title...')
-                return
+    if typecheck == '000e':
+        print('\nThis is an update, so we are getting the legit ticket straight from Nintendo.')
+        if not download_file(baseurl + '/cetk', os.path.join(rawdir, 'title.tik'), retry_count):
+            print('ERROR: Could not download ticket from {}'.format(baseurl + '/cetk'))
+            print('Skipping title...')
+            return
+    elif onlinetickets:
+        keysite = get_keysite()
+        tikurl = 'https://{}/ticket/{}.tik'.format(keysite, title_id)
+        if not download_file(tikurl, os.path.join(rawdir, 'title.tik'), retry_count):
+            print('ERROR: Could not download ticket from {}'.format(keysite))
+            print('Skipping title...')
+            return
     else:
         make_ticket(title_id, title_key, title_version, os.path.join(rawdir, 'title.tik'), patch_demo, patch_dlc)
 
@@ -301,7 +301,7 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
     for i in range(content_count):
         c_offs = 0xB04 + (0x30 * i)
         total_size += int(binascii.hexlify(tmd[c_offs + 0x08:c_offs + 0x10]), 16)
-    print('Total size is {}'.format(bytes2human(total_size)))
+    print('Total size is {}\n'.format(bytes2human(total_size)))
 
     for i in range(content_count):
         c_offs = 0xB04 + (0x30 * i)
@@ -365,8 +365,8 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
         name = None
         region = None
 
-        #game updates have a ticket on cdn, so we don't need it from json
-        if onlinetickets and (title_id[4:8] == '000e'):
+        #it would be best to try and get name and region if it exists in the json too, for the update
+        if (title_id[4:8] == '000e'):
             process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only)
         else:
             if keys:
