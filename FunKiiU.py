@@ -15,7 +15,6 @@ import os
 import re
 import sys
 import zlib
-import ssl
 
 try:
     from urllib.request import urlopen
@@ -63,8 +62,6 @@ parser.add_argument('-simulate', action='store_true', default=False, dest='simul
                     help="Don't download anything, just do like you would.")
 parser.add_argument('-ticketsonly', action='store_true', default=False, dest='tickets_only',
                     help="Only download/generate tickets (and TMD and CERT), don't download any content")
-parser.add_argument('-disablessl', action='store_true', default=False, dest='disable_ssl',
-                    help="This will disable ssl verification for file downloads")
 
 
 def bytes2human(n, f='%(value).2f %(symbol)s', symbols='customary'):
@@ -106,17 +103,10 @@ def progress_bar(part, total, length=10, char='#', blank=' ', left='[', right=']
     ) + ' ' * 20
 
 
-def download_file(url, outfname, retry_count=3, disable_ssl=False, ignore_404=False, expected_size=None, chunk_size=0x4096):
-
+def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=None, chunk_size=0x4096):
     for _ in retry(retry_count):
         try:
-            if disable_ssl:
-                ctx = ssl.create_default_context()
-                ctx.check_hostname = False
-                ctx.verify_mode = ssl.CERT_NONE
-                infile = urlopen(url,context=ctx)
-            else:
-                infile = urlopen(url)
+            infile = urlopen(url)
             # start of modified code
             if os.path.isfile(outfname):
                 statinfo = os.stat(outfname)
@@ -240,7 +230,7 @@ def safe_filename(filename):
 
 
 def process_title_id(title_id, title_key, name=None, region=None, output_dir=None, retry_count=3, onlinetickets=False, patch_demo=False,
-                     patch_dlc=False, simulate=False, tickets_only=False, disable_ssl=False):
+                     patch_dlc=False, simulate=False, tickets_only=False):
     if name:
         dirname = '{} - {} - {}'.format(title_id, region, name)
     else:
@@ -271,7 +261,7 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
 
     baseurl = 'http://ccs.cdn.c.shop.nintendowifi.net/ccs/download/{}'.format(title_id)
     tmd_path = os.path.join(rawdir, 'title.tmd')
-    if not download_file(baseurl + '/tmd', tmd_path, retry_count, disable_ssl):
+    if not download_file(baseurl + '/tmd', tmd_path, retry_count):
         print('ERROR: Could not download TMD...')
         print('MAYBE YOU ARE BLOCKING CONNECTIONS TO NINTENDO? IF YOU ARE, DON\'T...! :)')
         print('Skipping title...')
@@ -288,14 +278,14 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
     # get ticket from keysite, from cdn if game update, or generate ticket
     if typecheck == '000e':
         print('\nThis is an update, so we are getting the legit ticket straight from Nintendo.')
-        if not download_file(baseurl + '/cetk', os.path.join(rawdir, 'title.tik'), retry_count, disable_ssl):
+        if not download_file(baseurl + '/cetk', os.path.join(rawdir, 'title.tik'), retry_count):
             print('ERROR: Could not download ticket from {}'.format(baseurl + '/cetk'))
             print('Skipping title...')
             return
     elif onlinetickets:
         keysite = get_keysite()
         tikurl = 'https://{}/ticket/{}.tik'.format(keysite, title_id)
-        if not download_file(tikurl, os.path.join(rawdir, 'title.tik'), retry_count, disable_ssl):
+        if not download_file(tikurl, os.path.join(rawdir, 'title.tik'), retry_count):
             print('ERROR: Could not download ticket from {}'.format(keysite))
             print('Skipping title...')
             return
@@ -325,10 +315,10 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
         outfname = os.path.join(rawdir, c_id + '.app')
         outfnameh3 = os.path.join(rawdir, c_id + '.h3')
 
-        if not download_file('{}/{}'.format(baseurl, c_id), outfname, retry_count, disable_ssl, expected_size=expected_size):
+        if not download_file('{}/{}'.format(baseurl, c_id), outfname, retry_count, expected_size=expected_size):
             print('ERROR: Could not download content file... Skipping title')
             return
-        if not download_file('{}/{}.h3'.format(baseurl, c_id), outfnameh3, retry_count, disable_ssl, ignore_404=True):
+        if not download_file('{}/{}.h3'.format(baseurl, c_id), outfnameh3, retry_count, ignore_404=True):
             print('ERROR: Could not download h3 file... Skipping title')
             return
 
@@ -336,7 +326,7 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
 
 
 def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download_regions=False, output_dir=None,
-         retry_count=3, patch_demo=True, patch_dlc=True, simulate=False, tickets_only=False, disable_ssl=False):
+         retry_count=3, patch_demo=True, patch_dlc=True, simulate=False, tickets_only=False):
     print('*******\nFunKiiU {} by cearp and the cerea1killer\n*******\n'.format(__VERSION__))
     titlekeys_data = []
 
@@ -359,7 +349,7 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
 
         print(u'Downloading/updating data from {0}'.format(keysite))
 
-        if not download_file('https://{0}/json'.format(keysite), 'titlekeys.json', retry_count, disable_ssl):
+        if not download_file('https://{0}/json'.format(keysite), 'titlekeys.json', retry_count):
             print('ERROR: Could not download data file... Exiting.\n')
             sys.exit(1)
 
@@ -380,7 +370,7 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
 
         #it would be best to try and get name and region if it exists in the json too, for the update
         if (title_id[4:8] == '000e'):
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only, disable_ssl)
+            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only)
         else:
             if keys:
                 title_key = keys.pop()
@@ -409,7 +399,7 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
                 print('ERROR: Could not find title or ticket for {}'.format(title_id))
                 continue
 
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only, disable_ssl)
+            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only)
 
     if download_regions:
         for title_data in titlekeys_data:
@@ -429,7 +419,7 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
             elif onlinekeys and (not title_data['titleKey']):
                 continue
 
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only, disable_ssl)
+            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only)
 
 
 def log(output):
@@ -448,5 +438,4 @@ if __name__ == '__main__':
          patch_demo=arguments.patch_demo,
          patch_dlc=arguments.patch_dlc,
          simulate=arguments.simulate,
-         tickets_only=arguments.tickets_only,
-         disable_ssl=arguments.disable_ssl)
+         tickets_only=arguments.tickets_only)
