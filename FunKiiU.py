@@ -371,38 +371,34 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
         name = None
         region = None
 
-        #it would be best to try and get name and region if it exists in the json too, for the update
-        if (title_id[4:8] == '000e'):
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only)
-        else:
-            if keys:
-                title_key = keys.pop()
-                if not check_title_key(title_key):
-                    print('The key(s) must be 32 hexadecimal characters long')
-                    print('{} - is not ok.'.format(title_id))
-                    sys.exit(0)
-            elif onlinekeys or onlinetickets:
-                title_data = next((t for t in titlekeys_data if t['titleID'] == title_id.lower()), None)
+        if keys:
+            title_key = keys.pop()
+            if not check_title_key(title_key):
+                print('The key(s) must be 32 hexadecimal characters long')
+                print('{} - is not ok.'.format(title_id))
+                sys.exit(0)
+        elif onlinekeys or onlinetickets:
+            title_data = next((t for t in titlekeys_data if t['titleID'] == title_id.lower()), None)
 
-                if not title_data:
-                    print("ERROR: Could not find data on {} for {}, skipping".format(keysite, title_id))
-                    continue
-                elif onlinetickets:
-                    if title_data['ticket'] == '0':
-                        print('ERROR: Ticket not available on {} for {}'.format(keysite,title_id))
-                        continue
-
-                elif onlinekeys:
-                    title_key = title_data['titleKey']
-
-                name = title_data.get('name', None)
-                region = title_data.get('region', None)
-
-            if not (title_key or onlinetickets):
-                print('ERROR: Could not find title or ticket for {}'.format(title_id))
+            if not title_data:
+                print("ERROR: Could not find data on {} for {}, skipping".format(keysite, title_id))
                 continue
+            elif onlinetickets:
+                if title_data['ticket'] == '0':
+                    print('ERROR: Ticket not available on {} for {}'.format(keysite,title_id))
+                    continue
 
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only)
+            elif onlinekeys:
+                title_key = title_data['titleKey']
+
+            name = title_data.get('name', None)
+            region = title_data.get('region', None)
+
+        if not (title_key or onlinetickets):
+            print('ERROR: Could not find title or ticket for {}'.format(title_id))
+            continue
+
+        process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only)
 
     if download_regions:
         for title_data in titlekeys_data:
