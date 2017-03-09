@@ -371,6 +371,8 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
         name = None
         region = None
 
+        patch = title_id[4:8] == '000e'
+
         if keys:
             title_key = keys.pop()
             if not check_title_key(title_key):
@@ -380,21 +382,23 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
         elif onlinekeys or onlinetickets:
             title_data = next((t for t in titlekeys_data if t['titleID'] == title_id.lower()), None)
 
-            if not title_data:
-                print("ERROR: Could not find data on {} for {}, skipping".format(keysite, title_id))
-                continue
-            elif onlinetickets:
-                if title_data['ticket'] == '0':
-                    print('ERROR: Ticket not available on {} for {}'.format(keysite,title_id))
+            if not patch:
+                if not title_data:
+                    print("ERROR: Could not find data on {} for {}, skipping".format(keysite, title_id))
                     continue
+                elif onlinetickets:
+                    if title_data['ticket'] == '0':
+                        print('ERROR: Ticket not available on {} for {}'.format(keysite,title_id))
+                        continue
 
-            elif onlinekeys:
-                title_key = title_data['titleKey']
+                elif onlinekeys:
+                    title_key = title_data['titleKey']
 
-            name = title_data.get('name', None)
-            region = title_data.get('region', None)
+            if title_data:
+                name = title_data.get('name', None)
+                region = title_data.get('region', None)
 
-        if not (title_key or onlinetickets):
+        if not (title_key or onlinetickets or patch):
             print('ERROR: Could not find title or ticket for {}'.format(title_id))
             continue
 
