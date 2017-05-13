@@ -113,10 +113,7 @@ def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=
                 diskFilesize = statinfo.st_size
             else:
                 diskFilesize = 0
-            try:
-                print('-Downloading {}.\n-File size is {}.\n-File in disk is {}.'.format(outfname, expected_size,diskFilesize))
-            except UnicodeEncodeError:
-                print('-Downloading {}.\n-File size is {}.\n-File in disk is {}.'.format(repr(outfname), expected_size,diskFilesize))
+                log('-Downloading {}.\n-File size is {}.\n-File in disk is {}.'.format(outfname, expected_size,diskFilesize))         
 
             #if not (expected_size is None):
             if expected_size != diskFilesize:
@@ -426,7 +423,10 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
 
 
 def log(output):
-    print(output.encode(sys.stdout.encoding, errors='replace'))
+    output = output.encode(sys.stdout.encoding, errors='replace')
+    if sys.version_info[0] == 3:
+        output = output.decode(sys.stdout.encoding, errors='replace')
+    print(output)
 
 
 if __name__ == '__main__':
