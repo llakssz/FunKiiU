@@ -112,9 +112,9 @@ def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=
                 statinfo = os.stat(outfname)
                 diskFilesize = statinfo.st_size
             else:
-                diskFilesize = 0
+                diskFilesize = 0 
             log('-Downloading {}.\n-File size is {}.\n-File in disk is {}.'.format(outfname, expected_size,diskFilesize))
-
+  
             #if not (expected_size is None):
             if expected_size != diskFilesize:
                 with open(outfname, 'wb') as outfile:
@@ -375,19 +375,18 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
         name = None
         region = None
 
-        #it would be best to try and get name and region if it exists in the json too, for the update
-        if (title_id[4:8] == '000e'):
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only)
-        else:
-            if keys:
-                title_key = keys.pop()
-                if not check_title_key(title_key):
-                    print('The key(s) must be 32 hexadecimal characters long')
-                    print('{} - is not ok.'.format(title_id))
-                    sys.exit(0)
-            elif onlinekeys or onlinetickets:
-                title_data = next((t for t in titlekeys_data if t['titleID'] == title_id.lower()), None)
+        patch = title_id[4:8] == '000e'
 
+        if keys:
+            title_key = keys.pop()
+            if not check_title_key(title_key):
+                print('The key(s) must be 32 hexadecimal characters long')
+                print('{} - is not ok.'.format(title_id))
+                sys.exit(0)
+        elif onlinekeys or onlinetickets:
+            title_data = next((t for t in titlekeys_data if t['titleID'] == title_id.lower()), None)
+
+            if not patch:
                 if not title_data:
                     print("ERROR: Could not find data on {} for {}, skipping".format(keysite, title_id))
                     continue
@@ -399,14 +398,15 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
                 elif onlinekeys:
                     title_key = title_data['titleKey']
 
+            if title_data:
                 name = title_data.get('name', None)
                 region = title_data.get('region', None)
 
-            if not (title_key or onlinetickets):
-                print('ERROR: Could not find title or ticket for {}'.format(title_id))
-                continue
+        if not (title_key or onlinetickets or patch):
+            print('ERROR: Could not find title or ticket for {}'.format(title_id))
+            continue
 
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only)
+        process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only)
 
     if download_regions:
         for title_data in titlekeys_data:
@@ -434,7 +434,7 @@ def log(output):
     if sys.version_info[0] == 3:
         output = output.decode(sys.stdout.encoding, errors='replace')
     print(output)
-    
+
 
 if __name__ == '__main__':
     arguments = parser.parse_args()
