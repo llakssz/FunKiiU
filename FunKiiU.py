@@ -16,6 +16,12 @@ import re
 import sys
 import zlib
 
+from multiprocessing import Pool, TimeoutError
+
+import time
+
+import signal
+
 try:
     from urllib.request import urlopen
     from urllib.error import URLError, HTTPError
@@ -225,22 +231,22 @@ def safe_filename(filename):
     >>> print(safe_filename("幻影異聞録♯ＦＥ"))
     幻影異聞録_ＦＥ
     """
-    keep = ' ._'
+    keep = '_-'
     return re.sub(r'_+', '_', ''.join(c if (c.isalnum() or c in keep) else '_' for c in filename)).strip('_ ')
 
 
 def process_title_id(title_id, title_key, name=None, region=None, output_dir=None, retry_count=3, onlinetickets=False, patch_demo=False,
                      patch_dlc=False, simulate=False, tickets_only=False):
     if name:
-        dirname = '{} - {} - {}'.format(title_id, region, name)
+        dirname = '{}-{}-{}'.format(name, region, title_id)
     else:
         dirname = title_id
 
     typecheck = title_id[4:8]
     if typecheck == '000c':
-        dirname = dirname + ' - DLC'
+        dirname = dirname + '-DLC'
     elif typecheck == '000e':
-        dirname = dirname + ' - Update'
+        dirname = dirname + '-Update'
 
     rawdir = os.path.join('install', safe_filename(dirname))
 
@@ -325,7 +331,7 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
     log('\nTitle download complete in "{}"\n'.format(dirname))
 
 
-def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download_regions=False, output_dir=None,
+def main(titles=None, keys=None, onlinekeys=False, onlinetickets=True, download_regions=False, output_dir=None,
          retry_count=3, patch_demo=True, patch_dlc=True, simulate=False, tickets_only=False):
     print('*******\nFunKiiU {} by cearp and the cerea1killer\n*******\n'.format(__VERSION__))
     titlekeys_data = []
@@ -409,6 +415,7 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
         process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only)
 
     if download_regions:
+        jobData = []
         for title_data in titlekeys_data:
             title_id = title_data['titleID']
             title_key = title_data.get('titleKey', None)
@@ -425,15 +432,34 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
                 continue
             elif onlinekeys and (not title_data['titleKey']):
                 continue
+            jobData.append([title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only])
 
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only)
-
+        # http://stackoverflow.com/a/11312948/21027
+        pool = Pool(processes=4, initializer=init_worker)
+        try:
+            pool.map(process_title_id_job, jobData)
+        except KeyboardInterrupt:
+            # Allow ^C to interrupt from any thread.
+            sys.stdout.write('\033[0m')
+            sys.stdout.write('User Interupt\n')
+            pool.terminate()
+        else:
+            pool.close()
+        pool.join()
 
 def log(output):
     output = output.encode(sys.stdout.encoding, errors='replace')
     if sys.version_info[0] == 3:
         output = output.decode(sys.stdout.encoding, errors='replace')
     print(output)
+
+
+def process_title_id_job(args):
+    return process_title_id(*args)
+
+
+def init_worker():
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
 if __name__ == '__main__':
