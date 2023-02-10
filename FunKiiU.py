@@ -1,10 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-#  FunKiiU 2.2
+#  FunKiiU 2.3
 
 from __future__ import unicode_literals, print_function
 
-__VERSION__ = 2.2
+__VERSION__ = 2.3
 
 import argparse
 import base64
@@ -62,6 +62,13 @@ parser.add_argument('-simulate', action='store_true', default=False, dest='simul
                     help="Don't download anything, just do like you would.")
 parser.add_argument('-ticketsonly', action='store_true', default=False, dest='tickets_only',
                     help="Only download/generate tickets (and TMD and CERT), don't download any content")
+#Version 2.3 - logging capabilities and reading titles/keys from file
+parser.add_argument('-logfile', action='store', dest='log_file',
+                    help='The custom log file to store log information in, if desired')
+parser.add_argument('-titlefile', action='store', dest='title_file',
+                    help='The custom Title ID file to read titles from (one for each line), if desired')
+parser.add_argument('-keyfile', action='store', dest='key_file',
+                    help='The custom Title Key file to read encrypted title key from (one for each line, same order as TitleIDs), if desired')
 
 
 def bytes2human(n, f='%(value).2f %(symbol)s', symbols='customary'):
@@ -103,7 +110,7 @@ def progress_bar(part, total, length=10, char='#', blank=' ', left='[', right=']
     ) + ' ' * 20
 
 
-def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=None, chunk_size=0x4096):
+def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=None, chunk_size=0x4096, logfile=None):
     for _ in retry(retry_count):
         try:
             infile = urlopen(url)
@@ -113,7 +120,7 @@ def download_file(url, outfname, retry_count=3, ignore_404=False, expected_size=
                 diskFilesize = statinfo.st_size
             else:
                 diskFilesize = 0 
-            log('-Downloading {}.\n-File size is {}.\n-File in disk is {}.'.format(outfname, expected_size,diskFilesize))
+            log('-Downloading {}.\n-File size is {}.\n-File in disk is {}.'.format(outfname, expected_size,diskFilesize), logfile)
   
             #if not (expected_size is None):
             if expected_size != diskFilesize:
@@ -230,7 +237,7 @@ def safe_filename(filename):
 
 
 def process_title_id(title_id, title_key, name=None, region=None, output_dir=None, retry_count=3, onlinetickets=False, patch_demo=False,
-                     patch_dlc=False, simulate=False, tickets_only=False):
+                     patch_dlc=False, simulate=False, tickets_only=False, logfile=None):
     if name:
         dirname = '{} - {} - {}'.format(title_id, region, name)
     else:
@@ -245,10 +252,10 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
     rawdir = os.path.join('install', safe_filename(dirname))
 
     if simulate:
-        log('Simulate: Would start work in in: "{}"'.format(rawdir))
+        log('Simulate: Would start work in in: "{}"'.format(rawdir), logfile)
         return
 
-    log('Starting work in: "{}"'.format(rawdir))
+    log('Starting work in: "{}"'.format(rawdir), logfile)
 
     if output_dir is not None:
         rawdir = os.path.join(output_dir, rawdir)
@@ -261,7 +268,7 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
 
     baseurl = 'http://ccs.cdn.c.shop.nintendowifi.net/ccs/download/{}'.format(title_id)
     tmd_path = os.path.join(rawdir, 'title.tmd')
-    if not download_file(baseurl + '/tmd', tmd_path, retry_count):
+    if not download_file(baseurl + '/tmd', tmd_path, retry_count, logfile):
         print('ERROR: Could not download TMD...')
         print('MAYBE YOU ARE BLOCKING CONNECTIONS TO NINTENDO? IF YOU ARE, DON\'T...! :)')
         print('Skipping title...')
@@ -270,8 +277,13 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
     with open(os.path.join(rawdir, 'title.cert'), 'wb') as f:
         f.write(MAGIC)
 
-    with open(tmd_path, 'rb') as f:
-        tmd = f.read()
+    try:
+        with open(tmd_path, 'rb') as f:
+            tmd = f.read()
+    except FileNotFoundError:
+        log("ERROR - could not access TMD file: " + tmd_path, logfile)
+        return
+
 
     title_version = tmd[TK + 0x9C:TK + 0x9E]
 
@@ -287,6 +299,7 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
         tikurl = '{}/ticket/{}.tik'.format(keysite, title_id)
         if not download_file(tikurl, os.path.join(rawdir, 'title.tik'), retry_count):
             print('ERROR: Could not download ticket from {}'.format(keysite))
+            log('ERROR: Could not download ticket from {}'.format(keysite), logfile)
             print('Skipping title...')
             return
     else:
@@ -322,11 +335,11 @@ def process_title_id(title_id, title_key, name=None, region=None, output_dir=Non
             print('ERROR: Could not download h3 file... Skipping title')
             return
 
-    log('\nTitle download complete in "{}"\n'.format(dirname))
+    log('\nTitle download complete in "{}"\n'.format(dirname), logfile)
 
 
 def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download_regions=False, output_dir=None,
-         retry_count=3, patch_demo=True, patch_dlc=True, simulate=False, tickets_only=False):
+         retry_count=3, patch_demo=True, patch_dlc=True, simulate=False, tickets_only=False, logfile=None, titlefile=None, keyfile=None):
     print('*******\nFunKiiU {} by cearp and the cerea1killer\n*******\n'.format(__VERSION__))
     titlekeys_data = []
 
@@ -343,6 +356,26 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
         print('You also need to provide \'-keys\' or use \'-onlinekeys\' or \'-onlinetickets\'')
         sys.exit(0)
 
+    #Version 2.3
+    filetitles = None
+    filekeys = None
+    if titlefile is not None:
+        with open(titlefile, 'r') as title_file:
+            filetitles = title_file.read().splitlines()
+        if keyfile is not None:
+            with open(keyfile, 'r') as key_file:
+                filekeys = key_file.read().splitlines()
+            if (len(filekeys)!=len(filetitles)):
+                print('Number of keys and Title IDs provided in files do not match up')
+                sys.exit(0)
+            keys = keys + filekeys
+        if filetitles and (not filekeys and not onlinekeys and not onlinetickets):
+            print('You also need to provide \'-keyfile\' or use \'-onlinekeys\' or \'-onlinetickets\'')
+            sys.exit(0)
+        #print("DEBUG - " + repr(titles))
+        #print("DEBUG - " + repr(filetitles))
+        titles = titles + filetitles
+        #print("DEBUG - " + repr(titles))
 
     if download_regions or onlinekeys or onlinetickets:        
         while True:
@@ -406,7 +439,7 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
             print('ERROR: Could not find title or ticket for {}'.format(title_id))
             continue
 
-        process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only)
+        process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only, logfile)
 
     if download_regions:
         for title_data in titlekeys_data:
@@ -426,13 +459,17 @@ def main(titles=None, keys=None, onlinekeys=False, onlinetickets=False, download
             elif onlinekeys and (not title_data['titleKey']):
                 continue
 
-            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only)
+            process_title_id(title_id, title_key, name, region, output_dir, retry_count, onlinetickets, patch_demo, patch_dlc, simulate, tickets_only, logfile)
 
 
-def log(output):
+def log(output, logfile=None):
     output = output.encode(sys.stdout.encoding, errors='replace')
     if sys.version_info[0] == 3:
         output = output.decode(sys.stdout.encoding, errors='replace')
+    #Version 2.3
+    if logfile is not None:
+        with open(logfile, 'a') as f:
+            print(output, file=f)
     print(output)
 
 
@@ -448,4 +485,7 @@ if __name__ == '__main__':
          patch_demo=arguments.patch_demo,
          patch_dlc=arguments.patch_dlc,
          simulate=arguments.simulate,
-         tickets_only=arguments.tickets_only)
+         tickets_only=arguments.tickets_only,
+         logfile=arguments.log_file,
+         titlefile=arguments.title_file,
+         keyfile=arguments.key_file)
